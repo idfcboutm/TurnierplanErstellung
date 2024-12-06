@@ -92,13 +92,16 @@ def assign_matches_to_fields(all_matches_group1: List[Tuple[str, str, str]], sec
             if i < len(second_round_matches_group2):
                 alternating_matches.append(second_round_matches_group2[i])
 
+
+
+
         # Überprüfen, ob der Schiedsrichter auf Feld 1 oder 3 gleichzeitig als Spieler aktiv ist
         for match in alternating_matches:
             referee: str = match[2]
 
             # Überprüfen, ob der Schiedsrichter in Feld 1 oder 3 bereits als Spieler aktiv ist
-            all_players_on_fields_1_3: List[str] = [m[0] for m in without_second_round_matches_group1] + [m[1] for m in without_second_round_matches_group1] + \
-                                                     [m[0] for m in without_second_round_matches_group2] + [m[1] for m in without_second_round_matches_group2]
+            all_players_on_fields_1_3: List[str] = [m[0] for m in without_second_round_matches_group1] + [m[1] for m in without_second_round_matches_group1] + [m[2] for m in without_second_round_matches_group1] + \
+                                                     [m[0] for m in without_second_round_matches_group2] + [m[1] for m in without_second_round_matches_group2 + [m[2] for m in without_second_round_matches_group2]]
 
             # Wenn der Schiedsrichter als Spieler auf Feld 1 oder Feld 3 aktiv ist, suche einen neuen Schiedsrichter
             if referee in all_players_on_fields_1_3:
@@ -107,12 +110,14 @@ def assign_matches_to_fields(all_matches_group1: List[Tuple[str, str, str]], sec
                     if new_referee not in all_players_on_fields_1_3:
                         match = (match[0], match[1], new_referee)  # Setze den neuen Schiedsrichter
                         break
-
             # Spiele auf Feld 2 hinzufügen
             fields[2].append(match)
 
         # Feld 3: Alle Spiele ohne jedes zweite Spiel aus Gruppe 2
         fields[3] = without_second_round_matches_group2
+
+        #TODO Prüfe ob Schiedsrichter auf Feld 1 oder 3 gleichzeitig als Spieler auf Feld 2 aktiv ist
+
 
     return fields
 
