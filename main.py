@@ -97,14 +97,14 @@ def assign_matches_to_fields(all_matches_group1: List[Tuple[str, str, str]], sec
 
         # Überprüfen, ob der Schiedsrichter auf Feld 1 oder 3 gleichzeitig als Spieler aktiv ist
         for match in alternating_matches:
-            referee: str = match[2]
+            redo_referee: str = match[2]
 
             # Überprüfen, ob der Schiedsrichter in Feld 1 oder 3 bereits als Spieler aktiv ist
             all_players_on_fields_1_3: List[str] = [m[0] for m in without_second_round_matches_group1] + [m[1] for m in without_second_round_matches_group1] + [m[2] for m in without_second_round_matches_group1] + \
                                                      [m[0] for m in without_second_round_matches_group2] + [m[1] for m in without_second_round_matches_group2 + [m[2] for m in without_second_round_matches_group2]]
 
             # Wenn der Schiedsrichter als Spieler auf Feld 1 oder Feld 3 aktiv ist, suche einen neuen Schiedsrichter
-            if referee in all_players_on_fields_1_3:
+            if redo_referee in all_players_on_fields_1_3:
                 # Finde einen neuen Schiedsrichter für dieses Match, der nicht als Spieler aktiv ist
                 for new_referee in [m[2] for m in without_second_round_matches_group1 + without_second_round_matches_group2]:
                     if new_referee not in all_players_on_fields_1_3:
@@ -112,6 +112,20 @@ def assign_matches_to_fields(all_matches_group1: List[Tuple[str, str, str]], sec
                         break
             # Spiele auf Feld 2 hinzufügen
             fields[2].append(match)
+
+        #REDO Feld 1
+        fields[1] = []
+        for match in without_second_round_matches_group1:
+            redo_referee_first_field: str = match[2]
+            all_players_on_fields_2: List[str] = [m[0] for m in alternating_matches] + [m[1] for m in alternating_matches] + [m[2] for m in alternating_matches]
+
+
+            if redo_referee_first_field in all_players_on_fields_2:
+                for new_referee in [m[2] for m in alternating_matches]:
+                    if new_referee not in all_players_on_fields_2:
+                        match = (match[0], match[1], new_referee)
+                        break
+            fields[1].append(match)
 
         # Feld 3: Alle Spiele ohne jedes zweite Spiel aus Gruppe 2
         fields[3] = without_second_round_matches_group2
