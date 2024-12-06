@@ -1,95 +1,98 @@
-from itertools import permutations
-import random
+def round_robin_tournament_with_referees(num_teams, group_name):
+    # Erstelle eine Liste von Teams (1 bis num_teams) mit den Gruppennamen
+    teams = [f"{group_name} {i + 1}" for i in range(num_teams)]
 
+    # Listen für alle Spiele, jedes zweite Spiel und alle ohne jedes zweite Spiel
+    all_matches = []
+    second_round_matches = []
+    without_second_round_matches = []
 
-def create_tournament_schedule(fun_teams, competitive_teams, fields, home_and_away=False):
-    if len(teams) < 3:
-        raise ValueError("Es müssen mindestens drei Teams sein, um einen Turnierplan zu erstellen.")
-
-    # Generiere alle möglichen Spiele (jeder gegen jeden)
-    fun_matches = [(team1, team2) for team1, team2 in permutations(fun_teams, 2) if team1 != team2]
-    competitive_matches = [(team1, team2) for team1, team2 in permutations(competitive_teams, 2) if team1 != team2]
-    schedule = []
-
-
-    occupied_fun_teams = []
-    occupied_competitive_teams = []
-    free_fun_teams = fun_teams
-    free_competitive_teams = competitive_teams
-    occupied_fields = []
-    free_fields = [field for field in range(1, fields+1)]
-    fun_fields = []
-    competitive_fields = []
-    mixed_fields = []
-
-    if fields % 2 == 0:
-        for i in range (1, int(fields/2) + 1):
-            fun_fields.append(i)
-            competitive_fields.append(int(i+fields/2))
-
-    if fields % 2 != 0:
-        for i in range (1, int(fields/2) + 1):
-            fun_fields.append(i)
-            competitive_fields.append(int(i+fields/2+1))
-        mixed_fields.append(int(fields/2+1))
-
-
-
-    print(free_fields)
-    print(fun_fields)
-    print(competitive_fields)
-    print(mixed_fields)
-
-    # Spiele mischen, um die Reihenfolge zu randomisieren
-    #TODO nicht random sondern prüfen wer davor gespielt hat und wer nicht
-    random.shuffle(fun_matches)
-    random.shuffle(competitive_matches)
-
-
-
-
-    # Runde für Runde planen
-    while fun_matches:
+    # Jede Runde hat die Spiele für diese Runde
+    for round_num in range(num_teams - 1):
         round_matches = []
-        teams_in_round = set()
+        available_referees = teams.copy()  # Liste der verfügbaren Schiedsrichter
 
-        for match in fun_matches[:]:  # Kopiere die Liste, um sie während der Iteration ändern zu können
-            if match[0] not in teams_in_round and match[1] not in teams_in_round:
-                # Füge das Spiel der Runde hinzu
-                possible_refs = [ref for ref in teams if ref not in match]
-                ref = random.choice(possible_refs)
-                round_matches.append((match[0], match[1], ref))
-                teams_in_round.update(match)  # Markiere Teams als beschäftigt
-                fun_matches.remove(match)  # Entferne das Spiel aus der Gesamtliste
+        for i in range(num_teams // 2):
+            team1 = teams[i]
+            team2 = teams[num_teams - 1 - i]
 
-        for match in round_matches:
-            schedule.append(match)  # Hinrunde hinzufügen
-            if home_and_away:
-                # Rückrunde direkt nach der Hinrunde mit demselben Schiedsrichter
-                schedule.append((match[1], match[0], match[2]))
+            # Schiedsrichter auswählen, der nicht an diesem Spiel beteiligt ist
+            available_referees.remove(team1)
+            available_referees.remove(team2)
 
-    return schedule
+            # Wenn weniger als 1 Schiedsrichter übrig ist, müssen wir die Liste der Schiedsrichter neu füllen
+            if not available_referees:
+                available_referees = [team for team in teams if team != team1 and team != team2]
+
+            referee = available_referees.pop(0)  # Der erste verfügbare Schiedsrichter wird gewählt
+
+            # Ein Spiel für die Runde hinzufügen, zusammen mit dem Schiedsrichter
+            match = (team1, team2, referee)
+            round_matches.append(match)
+
+            # Jedes zweite Spiel zusätzlich in der zweiten Liste speichern
+            if (i + 1) % 2 == 0:
+                second_round_matches.append(match)
+
+            # Schiedsrichter zurück in die Liste der verfügbaren Schiedsrichter setzen
+            available_referees.append(referee)
+
+        all_matches.extend(round_matches)  # Alle Spiele in die "all_matches" Liste einfügen
+        without_second_round_matches.extend([match for i, match in enumerate(round_matches) if (i + 1) % 2 != 0])
+
+        # Teams rotieren (der erste spielt gegen den letzten, der zweite gegen den vorletzten usw.)
+        teams = [teams[0]] + [teams[-1]] + teams[1:-1]
+
+    return all_matches, second_round_matches, without_second_round_matches
 
 
+def assign_matches_to_fields(all_matches_group1, second_round_matches_group1, without_second_round_matches_group1,
+                              all_matches_group2, second_round_matches_group2, without_second_round_matches_group2, num_fields):
+    # Basierend auf der Anzahl der Felder werden die Listen den Feldern zugewiesen
+    fields = {1: [], 2: [], 3: []}  # Felde 1, 2, 3
+
+    if num_fields == 2:
+        # Feld 1: Alle Spiele Gruppe 1, Feld 2: Alle Spiele Gruppe 2
+        fields[1] = all_matches_group1
+        fields[2] = all_matches_group2
+    elif num_fields == 3:
+        # Feld 1: Alle Spiele ohne jedes zweite Spiel aus Gruppe 1
+        fields[1] = without_second_round_matches_group1
+        # Feld 2: Abwechselnd jedes zweite Spiel von Gruppe 1 und Gruppe 2
+        alternating_matches = []
+        max_len = max(len(second_round_matches_group1), len(second_round_matches_group2))
+        for i in range(max_len):
+            if i < len(second_round_matches_group1):
+                alternating_matches.append(second_round_matches_group1[i])
+            if i < len(second_round_matches_group2):
+                alternating_matches.append(second_round_matches_group2[i])
+        fields[2] = alternating_matches
+        # Feld 3: Alle Spiele ohne jedes zweite Spiel aus Gruppe 2
+        fields[3] = without_second_round_matches_group2
+
+    return fields
 
 
-def display_schedule(schedule):
-    print("Turnierplan:")
-    for i, game in enumerate(schedule, start=1):
-        print(f"Spiel {i}: {game[0]} vs {game[1]} (Schiedsrichter: {game[2]})")
+# Beispiel: Turnier mit 6 Teams für jede Gruppe
+num_teams_group1 = 6
+num_teams_group2 = 6
 
+# Erstelle den Turnierplan für Gruppe 1 (Schwitzer 1-6)
+all_matches_group1, second_round_matches_group1, without_second_round_matches_group1 = round_robin_tournament_with_referees(num_teams_group1, "Fun")
 
-# Beispiel-Eingabe
-if __name__ == "__main__":
-    teams = ["Team A", "Team B", "Team C", "Team D"]
+# Erstelle den Turnierplan für Gruppe 2 (Schwitzer 7-12)
+all_matches_group2, second_round_matches_group2, without_second_round_matches_group2 = round_robin_tournament_with_referees(num_teams_group2, "Schwitzer")
 
-    print("1: Nur Hinrunde\n2: Hin- und Rückrunde")
-    choice = input("Wählen Sie den Modus (1 oder 2): ")
+# Benutzer wählt die Anzahl der Felder (2 oder 3)
+num_fields = int(input("Gib die Anzahl der Felder ein (2 oder 3): "))
 
-    home_and_away = choice == "2"
+# Spiele den Plan den Feldern zuordnen
+fields = assign_matches_to_fields(all_matches_group1, second_round_matches_group1, without_second_round_matches_group1,
+                                  all_matches_group2, second_round_matches_group2, without_second_round_matches_group2, num_fields)
 
-    try:
-        schedule = create_tournament_schedule(teams, teams, 3, home_and_away=home_and_away)
-        display_schedule(schedule)
-    except ValueError as e:
-        print(f"Fehler: {e}")
+# Ausgabe der Spiele für jedes Feld
+for field, matches in fields.items():
+    print(f"\nFeld {field}:")
+    for match in matches:
+        team1, team2, referee = match
+        print(f"{team1} vs {team2} - Schiedsrichter: {referee}")
