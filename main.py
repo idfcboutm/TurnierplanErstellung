@@ -54,12 +54,12 @@ def round_robin_tournament_with_referees(num_teams: int, group_name: str) -> Tup
         # Teams rotieren (der erste spielt gegen den letzten, der zweite gegen den vorletzten usw.)
         teams = [teams[0]] + [teams[-1]] + teams[1:-1]
 
-    return all_matches, second_round_matches, without_second_round_matches
+    return all_matches, second_round_matches, without_second_round_matches, teams
 
 
 def assign_matches_to_fields(all_matches_group1: List[Tuple[str, str, str]], second_round_matches_group1: List[Tuple[str, str, str]], without_second_round_matches_group1: List[Tuple[str, str, str]],
                              all_matches_group2: List[Tuple[str, str, str]], second_round_matches_group2: List[Tuple[str, str, str]], without_second_round_matches_group2: List[Tuple[str, str, str]],
-                             num_fields: int) -> Dict[int, List[Tuple[str, str, str]]]:
+                             num_fields: int, fun_team: List[str], competitive_team: List[str]) -> Dict[int, List[Tuple[str, str, str]]]:
     """
     Weist die Spiele den Feldern zu.
 
@@ -72,6 +72,12 @@ def assign_matches_to_fields(all_matches_group1: List[Tuple[str, str, str]], sec
     :param num_fields: Anzahl der Felder (2 oder 3)
     :return: Ein Dictionary, das jedem Feld eine Liste von Spielen zuweist
     """
+
+
+    # TODO Dic mit den einzelne teams speichern, und wie oft sie gepfiffen haben
+    # TODO abfangen des falles, das die teams nicht die gleiche anzahl haben
+    # TODO ungerade teamanzahlen verarbeiten
+
     # Basierend auf der Anzahl der Felder werden die Listen den Feldern zugewiesen
     fields: Dict[int, List[Tuple[str, str, str]]] = {1: [], 2: [], 3: []}  # Felder 1, 2, 3
 
@@ -82,8 +88,14 @@ def assign_matches_to_fields(all_matches_group1: List[Tuple[str, str, str]], sec
     elif num_fields == 3:
         # Feld 1: Alle Spiele ohne jedes zweite Spiel aus Gruppe 1
         fields[1] = without_second_round_matches_group1
+
+        # Feld 3: Alle Spiele ohne jedes zweite Spiel aus Gruppe 2
+        fields[3] = without_second_round_matches_group2
+
         # Feld 2: Abwechselnd jedes zweite Spiel von Gruppe 1 und Gruppe 2
+
         alternating_matches: List[Tuple[str, str, str]] = []
+
         max_len: int = max(len(second_round_matches_group1), len(second_round_matches_group2))
 
         for i in range(max_len):
@@ -92,66 +104,56 @@ def assign_matches_to_fields(all_matches_group1: List[Tuple[str, str, str]], sec
             if i < len(second_round_matches_group2):
                 alternating_matches.append(second_round_matches_group2[i])
 
+        fields[2] = alternating_matches
 
-
-
-        # Überprüfen, ob der Schiedsrichter auf Feld 1 oder 3 gleichzeitig als Spieler aktiv ist
-        for match in alternating_matches:
-            redo_referee: str = match[2]
-
-            # Überprüfen, ob der Schiedsrichter in Feld 1 oder 3 bereits als Spieler aktiv ist
-            all_players_on_fields_1_3: List[str] = [m[0] for m in without_second_round_matches_group1] + [m[1] for m in without_second_round_matches_group1] + [m[2] for m in without_second_round_matches_group1] + \
-                                                     [m[0] for m in without_second_round_matches_group2] + [m[1] for m in without_second_round_matches_group2 + [m[2] for m in without_second_round_matches_group2]]
-
-            # Wenn der Schiedsrichter als Spieler auf Feld 1 oder Feld 3 aktiv ist, suche einen neuen Schiedsrichter
-            if redo_referee in all_players_on_fields_1_3:
-                # Finde einen neuen Schiedsrichter für dieses Match, der nicht als Spieler aktiv ist
-                for new_referee in [m[2] for m in without_second_round_matches_group1 + without_second_round_matches_group2]:
-                    if new_referee not in all_players_on_fields_1_3:
-                        match = (match[0], match[1], new_referee)  # Setze den neuen Schiedsrichter
+        for i in range(0, len(alternating_matches)):
+            if fields[2][i][2] in fields[1][i]:
+                for team in fun_team:
+                    if team not in fields[2][i] and team not in fields[1][i]:
+                        fields[2][i] = (fields[2][i][0], fields[2][i][1], team)
                         break
-            # Spiele auf Feld 2 hinzufügen
-            fields[2].append(match)
 
-        #REDO Feld 1
-        fields[1] = []
-        for match in without_second_round_matches_group1:
-            redo_referee_first_field: str = match[2]
-            all_players_on_fields_2: List[str] = [m[0] for m in alternating_matches] + [m[1] for m in alternating_matches] + [m[2] for m in alternating_matches]
-
-
-            if redo_referee_first_field in all_players_on_fields_2:
-                for new_referee in [m[2] for m in alternating_matches]:
-                    if new_referee not in all_players_on_fields_2:
-                        match = (match[0], match[1], new_referee)
+            if fields[2][i][2] in fields[3][i]:
+                for team in competitive_team:
+                    if team not in fields[2][i] and team not in fields[3][i]:
+                        fields[2][i] = (fields[2][i][0], fields[2][i][1], team)
                         break
-            fields[1].append(match)
 
-        # Feld 3: Alle Spiele ohne jedes zweite Spiel aus Gruppe 2
-        fields[3] = without_second_round_matches_group2
 
-        #TODO Prüfe ob Schiedsrichter auf Feld 1 oder 3 gleichzeitig als Spieler auf Feld 2 aktiv ist
+        for i in range(0, len(without_second_round_matches_group1)):
+            if fields[1][i][2] in fields[2][i]:
+                for team in fun_team:
+                    if team not in fields[1][i] and team not in fields[2][i]:
+                        fields[1][i] = (fields[1][i][0], fields[1][i][1], team)
+                        break
+
+        for i in range(0, len(without_second_round_matches_group2)):
+            if fields[3][i][2] in fields[2][i]:
+                for team in competitive_team:
+                    if team not in fields[3][i] and team not in fields[2][i]:
+                        fields[3][i] = (fields[3][i][0], fields[3][i][1], team)
+                        break
 
 
     return fields
 
 
 # Beispiel: Turnier mit 6 Teams für jede Gruppe
-num_teams_group1: int = 6
+num_teams_group1: int = 4
 num_teams_group2: int = 6
 
 # Erstelle den Turnierplan für Gruppe 1 (Fun 1-6)
-all_matches_group1, second_round_matches_group1, without_second_round_matches_group1 = round_robin_tournament_with_referees(num_teams_group1, "Fun")
+all_matches_group1, second_round_matches_group1, without_second_round_matches_group1, fun_team = round_robin_tournament_with_referees(num_teams_group1, "Fun")
 
 # Erstelle den Turnierplan für Gruppe 2 (Schwitzer 7-12)
-all_matches_group2, second_round_matches_group2, without_second_round_matches_group2 = round_robin_tournament_with_referees(num_teams_group2, "Schwitzer")
+all_matches_group2, second_round_matches_group2, without_second_round_matches_group2, competitive = round_robin_tournament_with_referees(num_teams_group2, "Schwitzer")
 
 # Benutzer wählt die Anzahl der Felder (2 oder 3)
 num_fields: int = int(input("Gib die Anzahl der Felder ein (2 oder 3): "))
 
 # Spiele den Plan den Feldern zuordnen
 fields: Dict[int, List[Tuple[str, str, str]]] = assign_matches_to_fields(all_matches_group1, second_round_matches_group1, without_second_round_matches_group1,
-                                                                            all_matches_group2, second_round_matches_group2, without_second_round_matches_group2, num_fields)
+                                                                            all_matches_group2, second_round_matches_group2, without_second_round_matches_group2, num_fields, fun_team, competitive_team=competitive)
 
 # Ausgabe der Spiele für jedes Feld
 for field, matches in fields.items():
