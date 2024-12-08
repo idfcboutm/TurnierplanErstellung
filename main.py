@@ -73,6 +73,9 @@ def assign_matches_to_fields(all_matches_group1: List[Tuple[str, str, str]], sec
     :return: Ein Dictionary, das jedem Feld eine Liste von Spielen zuweist
     """
 
+    referee_fun_dic = {team: 0 for team in fun_team}  # Initialisiere das Dictionary
+    referee_competitive_dic = {team: 0 for team in competitive_team}
+
 
     # TODO Dic mit den einzelne teams speichern, und wie oft sie gepfiffen haben
     # TODO abfangen des falles, das die teams nicht die gleiche anzahl haben
@@ -107,17 +110,24 @@ def assign_matches_to_fields(all_matches_group1: List[Tuple[str, str, str]], sec
         fields[2] = alternating_matches
 
         for i in range(0, len(alternating_matches)):
+            # Prüfen, ob der aktuelle Schiedsrichter von Feld 2 auch auf Feld 1 aktiv ist
             if fields[2][i][2] in fields[1][i]:
-                for team in fun_team:
-                    if team not in fields[2][i] and team not in fields[1][i]:
-                        fields[2][i] = (fields[2][i][0], fields[2][i][1], team)
-                        break
+                # Liste der möglichen Schiedsrichter, die in diesem Spiel pfeifen könnten
+                possible_referees = [team for team in fun_team if team not in fields[2][i] and team not in fields[1][i]]
+
+                # Finde das Team mit dem kleinsten Zählerwert im referee_fun_dic
+                if possible_referees:  # Sicherstellen, dass es mögliche Schiedsrichter gibt
+                    selected_team = min(possible_referees, key=lambda x: referee_fun_dic[x])
+                    fields[2][i] = (fields[2][i][0], fields[2][i][1], selected_team)  # Team als Schiedsrichter zuweisen
+                    referee_fun_dic[selected_team] += 1  # Zähler für das Team erhöhen
 
             if fields[2][i][2] in fields[3][i]:
-                for team in competitive_team:
-                    if team not in fields[2][i] and team not in fields[3][i]:
-                        fields[2][i] = (fields[2][i][0], fields[2][i][1], team)
-                        break
+                possible_referees = [team for team in competitive_team if team not in fields[2][i][0] and team not in fields[2][i][1] and team not in fields[3][i]]
+
+                if possible_referees:
+                    selected_team = min(possible_referees, key=lambda x: referee_competitive_dic[x])
+                    fields[2][i] = (fields[2][i][0], fields[2][i][1], selected_team)
+                    referee_competitive_dic[selected_team] += 1
 
 
         for i in range(0, len(without_second_round_matches_group1)):
@@ -128,18 +138,23 @@ def assign_matches_to_fields(all_matches_group1: List[Tuple[str, str, str]], sec
                         break
 
         for i in range(0, len(without_second_round_matches_group2)):
-            if fields[3][i][2] in fields[2][i]:
-                for team in competitive_team:
-                    if team not in fields[3][i] and team not in fields[2][i]:
-                        fields[3][i] = (fields[3][i][0], fields[3][i][1], team)
-                        break
+
+            possible_referees = [team for team in competitive_team if
+                                 team not in fields[3][i][0] and team not in fields[3][i][1] and team not in
+                                 fields[2][i]]
+            print(f"Possible Referees: {possible_referees}")
+            if possible_referees:
+                selected_team = min(possible_referees, key=lambda x: referee_competitive_dic[x])
+                fields[3][i] = (fields[3][i][0], fields[3][i][1], selected_team)
+                referee_competitive_dic[selected_team] += 1
+
 
 
     return fields
 
 
 # Beispiel: Turnier mit 6 Teams für jede Gruppe
-num_teams_group1: int = 4
+num_teams_group1: int = 6
 num_teams_group2: int = 6
 
 # Erstelle den Turnierplan für Gruppe 1 (Fun 1-6)
