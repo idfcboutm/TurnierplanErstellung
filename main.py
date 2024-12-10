@@ -175,15 +175,23 @@ def get_games_weighted(num_teams: int, group_name: str):
     matches = []
     total_games = num_teams * (num_teams - 1) // 2
 
+    last_match = None  # Variable, um das letzte Spiel zu speichern
+
     # Solange noch nicht alle Spiele durchgeführt wurden
     while len(matches) < total_games:
         # Sortiere formatted_matches nach der Anzahl der Spiele der beiden Teams
         formatted_matches.sort(key=lambda x: (team_fun_dic[x[0]], team_fun_dic[x[1]]))
-
+        print(f"Formatted Matches: {formatted_matches}")
 
         # Wähle das erste Match aus der sortierten Liste
         team1, team2 = formatted_matches.pop(0)  # Wähle das Match mit den wenigsten Spielen
         new_match = (team1, team2)
+
+        # Überprüfe, ob eines der Teams im letzten Spiel war
+        if last_match and (team1 in last_match or team2 in last_match):
+            # Wenn eines der Teams im letzten Spiel war, überspringe dieses Spiel und wähle das nächste
+            formatted_matches.append((team1, team2))
+            continue
 
         # Füge das Match der Liste hinzu
         matches.append(new_match)
@@ -192,12 +200,13 @@ def get_games_weighted(num_teams: int, group_name: str):
         team_fun_dic[team1] += 1
         team_fun_dic[team2] += 1
 
-
+        # Speichere das aktuelle Match als das letzte Spiel
+        last_match = new_match
 
     print(f"Matches: {matches}")
-    print(f"Formatted Matches: {formatted_matches}")
     for match in matches:
         print(f"Match: {match}")
+
 
 
 
