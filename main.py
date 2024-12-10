@@ -153,6 +153,54 @@ def assign_matches_to_fields(all_matches_group1: List[Tuple[str, str, str]], sec
     return fields
 
 
+def get_games_weighted(num_teams: int, group_name: str):
+    teams = []
+
+    # Initialisiere das Dictionary mit den Teamnamen und der Anzahl der gespielten Spiele
+    team_fun_dic = {f"Fun {team}": 0 for team in range(1, num_teams + 1)}
+
+    # Generiere alle Teamnamen
+    for i in range(1, num_teams + 1):
+        teams.append(f"{group_name} {i}")
+
+    from itertools import combinations
+
+    # Erzeuge alle Kombinationen von Teams
+    all_matches = list(combinations(range(1, num_teams + 1), 2))
+
+    # Erzeuge die formatted_matches-Liste mit den Teamnamen
+    formatted_matches = [(f"Fun {team1}", f"Fun {team2}") for (team1, team2) in all_matches]
+    print(f"Formatted Matches: {formatted_matches}")
+
+    matches = []
+    total_games = num_teams * (num_teams - 1) // 2
+
+    # Solange noch nicht alle Spiele durchgeführt wurden
+    while len(matches) < total_games:
+        # Sortiere formatted_matches nach der Anzahl der Spiele der beiden Teams
+        formatted_matches.sort(key=lambda x: (team_fun_dic[x[0]], team_fun_dic[x[1]]))
+
+
+        # Wähle das erste Match aus der sortierten Liste
+        team1, team2 = formatted_matches.pop(0)  # Wähle das Match mit den wenigsten Spielen
+        new_match = (team1, team2)
+
+        # Füge das Match der Liste hinzu
+        matches.append(new_match)
+
+        # Erhöhe die Anzahl der Spiele für beide Teams
+        team_fun_dic[team1] += 1
+        team_fun_dic[team2] += 1
+
+
+
+    print(f"Matches: {matches}")
+    print(f"Formatted Matches: {formatted_matches}")
+    for match in matches:
+        print(f"Match: {match}")
+
+
+
 # Beispiel: Turnier mit 6 Teams für jede Gruppe
 num_teams_group1: int = 6
 num_teams_group2: int = 6
@@ -170,9 +218,11 @@ num_fields: int = int(input("Gib die Anzahl der Felder ein (2 oder 3): "))
 fields: Dict[int, List[Tuple[str, str, str]]] = assign_matches_to_fields(all_matches_group1, second_round_matches_group1, without_second_round_matches_group1,
                                                                             all_matches_group2, second_round_matches_group2, without_second_round_matches_group2, num_fields, fun_team, competitive_team=competitive)
 
+get_games_weighted(num_teams_group1, "Fun")
+
 # Ausgabe der Spiele für jedes Feld
-for field, matches in fields.items():
-    print(f"\nFeld {field}:")
-    for match in matches:
-        team1, team2, referee = match
-        print(f"{team1} vs {team2} - Schiedsrichter: {referee}")
+#for field, matches in fields.items():
+ #   print(f"\nFeld {field}:")
+  #  for match in matches:
+   #     team1, team2, referee = match
+    #    print(f"{team1} vs {team2} - Schiedsrichter: {referee}")
