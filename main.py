@@ -2,8 +2,8 @@ from typing import List, Tuple, Dict
 from itertools import combinations
 
 
-#TODO ungleiche anzahl von teams abfangen: zum Beispiel Fun = 5 Teams und Schwitzer = 6 Teams:  große aufgabe
-#TODO Anzahl teams eingeben : kleine Aufgabe
+#TODO ungleiche anzahl von teams abfangen: zum Beispiel Fun = 5 Teams und Schwitzer = 6 Teams:  große aufgabe --> done für 2 gruppen mit 2 feldern, fehlt 3 felder, 4 felder
+#TODO Anzahl teams eingeben : kleine Aufgabe --> done, testing
 #TODO 4 Felder implementieren : große Aufgabe
 #TODO Hin und Rückspiel implementieren : kleine Aufgabe
 #TODO 1 Gruppe mehrere Felder : große Aufgabe
@@ -72,6 +72,28 @@ def distribute_games_to_fields_and_assign_referees(fun_matches: List[Tuple[str, 
     :return: Ein Dictionary, das jedem Feld eine Liste von Spielen zuweist
     """
 
+    def update_field_refs(source_field, target_field, all_teams, referee_dic):
+        """
+        Überprüft und aktualisiert die Schiedsrichter für die Ziel-Felder basierend auf Konflikten.
+
+        :param source_field: Ursprungsfeld für Konfliktüberprüfung
+        :param target_field: Zielfeld, dessen Schiedsrichter angepasst werden sollen
+        :param all_teams: Liste der möglichen Schiedsrichterteams
+        :param referee_dic: Dictionary, das die Einsätze der Schiedsrichter zählt
+        """
+        for i in range(len(fields[target_field])):
+            if fields[target_field][i][2] in fields[source_field][i]:
+                possible_referees = [team for team in all_teams if
+                                     team not in fields[target_field][i][0] and team not in fields[target_field][i][
+                                         1] and team not in fields[source_field][i]]
+                if possible_referees:
+                    selected_team = min(possible_referees, key=lambda x: referee_dic[x])
+                    fields[target_field][i] = (fields[target_field][i][0], fields[target_field][i][1], selected_team)
+                    referee_dic[selected_team] += 1
+                    referee_dic[fields[target_field][i][2]] -= 1
+
+
+
 
 
     # Basierend auf der Anzahl der Felder werden die Listen den Feldern zugewiesen
@@ -123,26 +145,13 @@ def distribute_games_to_fields_and_assign_referees(fun_matches: List[Tuple[str, 
 
 
         if len(fun_matches) < len(competitive_matches):
-            for i in range(0, len(fields[2])):
-                possible_referees = [team for team in all_teams_competitive if team not in fields[1][i][0] and team not in fields[1][i][1] and team not in fields[2][i]]
-                if possible_referees:
-
-                    selected_team = min(possible_referees, key=lambda x: referee_competitive_dic[x])
-                    fields[2][i] = (fields[2][i][0], fields[2][i][1], selected_team)
-                    referee_competitive_dic[selected_team] += 1
-                    referee_competitive_dic[fields[2][i][2]] -= 1
-                    break
+            update_field_refs(1, 2, all_teams_competitive, referee_competitive_dic)
+            update_field_refs(2, 1, all_teams_competitive, referee_competitive_dic)
 
         if len(fun_matches) > len(competitive_matches):
+            update_field_refs(1, 2, all_teams_fun, referee_fun_dic)
+            update_field_refs(2, 1, all_teams_fun, referee_fun_dic)
 
-            for i in range(0, len(fields[1])):
-                possible_referees = [team for team in all_teams_fun if team not in fields[2][i][0] and team not in fields[2][i][1] and team not in fields[1][i]]
-                if possible_referees:
-                    selected_team = min(possible_referees, key=lambda x: referee_fun_dic[x])
-                    fields[1][i] = (fields[1][i][0], fields[1][i][1], selected_team)
-                    referee_fun_dic[selected_team] += 1
-                    referee_fun_dic[fields[1][i][2]] -= 1
-                    break
 
 
     elif num_fields == 3:
@@ -211,6 +220,7 @@ def distribute_games_to_fields_and_assign_referees(fun_matches: List[Tuple[str, 
                     referee_competitive_dic[fields[2][i][2]] -= 1
                     break
     return fields
+
 
 
 
@@ -287,7 +297,7 @@ def distribute_games_to_fields_with_one_group(only_team_matches: List[Tuple[str,
 
 
 # Beispiel: Turnier mit 6 Teams für jede Gruppe
-num_teams_group1: int = 5
+num_teams_group1: int = 7
 num_teams_group2: int = 6
 
 # Benutzer wählt die Anzahl der Felder (2 oder 3)
