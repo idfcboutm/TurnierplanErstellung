@@ -83,16 +83,31 @@ def distribute_games_to_fields_and_assign_referees(fun_matches: List[Tuple[str, 
         """
         for i in range(len(fields[target_field])):
             if fields[target_field][i][2] in fields[source_field][i]:
-                possible_referees = [team for team in all_teams if
-                                     team not in fields[target_field][i][0] and team not in fields[target_field][i][
-                                         1] and team not in fields[source_field][i]]
+                possible_referees = [team for team in all_teams if team not in fields[target_field][i][0] and team not in fields[target_field][i][1] and team not in fields[source_field][i]]
                 if possible_referees:
                     selected_team = min(possible_referees, key=lambda x: referee_dic[x])
                     fields[target_field][i] = (fields[target_field][i][0], fields[target_field][i][1], selected_team)
                     referee_dic[selected_team] += 1
                     referee_dic[fields[target_field][i][2]] -= 1
+                    break
 
+    def update_field_ref_without_checking(source_field, target_field, all_teams, referee_dic):
+        """
+        Überprüft und aktualisiert die Schiedsrichter für die Ziel-Felder basierend auf Konflikten.
 
+        :param source_field: Ursprungsfeld für Konfliktüberprüfung
+        :param target_field: Zielfeld, dessen Schiedsrichter angepasst werden sollen
+        :param all_teams: Liste der möglichen Schiedsrichterteams
+        :param referee_dic: Dictionary, das die Einsätze der Schiedsrichter zählt
+        """
+        for i in range(len(fields[target_field])):
+            possible_referees = [team for team in all_teams if team not in fields[target_field][i][0] and team not in fields[target_field][i][1] and team not in fields[source_field][i]]
+            if possible_referees:
+                selected_team = min(possible_referees, key=lambda x: referee_dic[x])
+                fields[target_field][i] = (fields[target_field][i][0], fields[target_field][i][1], selected_team)
+                referee_dic[selected_team] += 1
+                referee_dic[fields[target_field][i][2]] -= 1
+                break
 
 
 
@@ -186,7 +201,10 @@ def distribute_games_to_fields_and_assign_referees(fun_matches: List[Tuple[str, 
                 break
 
 
+
+        update_field_ref_without_checking(2,3, all_teams_competitive, referee_competitive_dic)
         for i in range(0, len(fields[3])):
+
 
             possible_referees = [team for team in all_teams_competitive if
                                  team not in fields[3][i][0] and team not in fields[3][i][1] and team not in fields[2][
