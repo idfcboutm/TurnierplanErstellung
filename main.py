@@ -12,7 +12,9 @@ from itertools import combinations
 
 #TODO zu wenig Teams für anzahl felder filtern oder ist das egal? : für eine grupee funktionierend, für 2 noch implementieren
 
+#TODO bei zu wenig teams hängt sich der algorithmus auf
 
+#TODO mehr teams als 6 wirft fehler? --> weil auf einem feld mehr spiele sind als auf dem anderem --> lsg min lenght suchen --> immer wieder alles andere dann testen
 
 def get_games_weighted(num_teams: int, group_name: str) -> List[Tuple[str, str]]:
     teams: List[str] = []
@@ -103,7 +105,9 @@ def distribute_games_to_fields_and_assign_referees(fun_matches: List[Tuple[str, 
         :param all_teams: Liste der möglichen Schiedsrichterteams
         :param referee_dic: Dictionary, das die Einsätze der Schiedsrichter zählt
         """
-        for i in range(len(fields[target_field])):
+        min_leng = min(len(fields[source_field]), len(fields[target_field]))
+
+        for i in range(min_leng):
             possible_referees = [team for team in all_teams if team not in fields[target_field][i][0] and team not in fields[target_field][i][1] and team not in fields[source_field][i]]
             if possible_referees:
                 selected_team = min(possible_referees, key=lambda x: referee_dic[x])
@@ -329,7 +333,7 @@ def distribute_games_to_fields_with_one_group(only_team_matches: List[Tuple[str,
 
 
 # Beispiel: Turnier mit 6 Teams für jede Gruppe
-num_teams_group1: int = 8
+num_teams_group1: int = 7
 num_teams_group2: int = 8
 
 # Benutzer wählt die Anzahl der Felder (2 oder 3)
@@ -364,7 +368,7 @@ if count_groups == 1:
 
 for field, matches in fields_new.items():
     print(f"\nFeld {field}:")
-    for match in matches:
+    for index, match in enumerate(matches):
         team1, team2, referee = match
-        print(f"{team1} vs {team2} - Schiedsrichter: {referee}")
+        print(f"{index}: {team1} vs {team2} - Schiedsrichter: {referee}")
 
