@@ -16,8 +16,18 @@ from itertools import combinations
 
 #TODO mehr teams als 6 wirft fehler? --> weil auf einem feld mehr spiele sind als auf dem anderem --> lsg min lenght suchen --> immer wieder alles andere dann testen
 
+
+
+
+
+#Erstellt die Spiele für in Groupname angegebene gruppe. z.B.: Fun und Schwitzer --> muss für jede gruppe einzeln aufgerufen werden
+#Die Paarungen werden so erstellt, dass Teams mit weniger Spielen priorisiert werden
+#Die Anzahl der Spiele pro Team wird in einem Dictionary gespeichert und bei jedem Spiel erhöht
+#Die Spiele werden in einer Liste von Tupeln gespeichert
+#Kein Team kann nicht 2 mal hintereinander in der liste sein --> für die spätere zuordnung auf Felder notwendig. Stichwort: ABABABAB
 def get_games_weighted(num_teams: int, group_name: str) -> List[Tuple[str, str]]:
     teams: List[str] = []
+
 
     # Initialisiere das Dictionary mit den Teamnamen und der Anzahl der gespielten Spiele
     team_fun_dic: Dict[str, int] = {f"{group_name} {team}": 0 for team in range(1, num_teams + 1)}
@@ -28,6 +38,7 @@ def get_games_weighted(num_teams: int, group_name: str) -> List[Tuple[str, str]]
 
     # Erzeuge alle Kombinationen von Teams
     all_matches: List[Tuple[int, int]] = list(combinations(range(1, num_teams + 1), 2))
+    print(f"Alle Spiele: {all_matches}")
 
     # Erzeuge die formatted_matches-Liste mit den Teamnamen
     formatted_matches: List[Tuple[str, str]] = [(f"{group_name} {team1}", f"{group_name} {team2}") for (team1, team2) in all_matches]
@@ -50,7 +61,7 @@ def get_games_weighted(num_teams: int, group_name: str) -> List[Tuple[str, str]]
         if last_match and (team1 in last_match or team2 in last_match):
             # Wenn eines der Teams im letzten Spiel war, überspringe dieses Spiel und wähle das nächste
             formatted_matches.append((team1, team2))
-            continue
+            continue #js geht nicht
 
         # Füge das Match der Liste hinzu
         matches.append(new_match)
@@ -66,6 +77,10 @@ def get_games_weighted(num_teams: int, group_name: str) -> List[Tuple[str, str]]
 
 
 
+#Funktion für die erstellung der Spiele für zwei gruppen
+#Ordnet die Spiele auf die im num_fields angegebenen Felder zu und weist Schiedsrichter zu
+#Schiedsrichter werden wie bei den spielen priorisiert, die weniger Spiele haben
+#Schiedsrichter und deren Anzahl der Spiele werden in einem Dictionary gespeichert
 def distribute_games_to_fields_and_assign_referees(fun_matches: List[Tuple[str, str]], competitive_matches: List[Tuple[str, str]], num_fields: int) -> Dict[int, List[Tuple[str, str, str]]]:
     """
     Weist die Spiele den Feldern zu und weist Schiedsrichter zu.
@@ -76,6 +91,9 @@ def distribute_games_to_fields_and_assign_referees(fun_matches: List[Tuple[str, 
     :return: Ein Dictionary, das jedem Feld eine Liste von Spielen zuweist
     """
 
+    #Funktion zum aktualisieren der Schiedsrichter auf den Feldern
+    #Überprüft, ob ein Schiedsrichter auf einem Feld in einem anderen Spiel spielt und weist ihm ein anderes Spiel zu --> nicht so wie die kommende Funktioon
+    #IST dann verwednet, WENN DIE FELDER GEMISCHT SIND, weil sonst schiedsrichter für falsche gruppen zugewiesen werden
     def update_field_refs(source_field, target_field, all_teams, referee_dic):
         """
         Überprüft und aktualisiert die Schiedsrichter für die Ziel-Felder basierend auf Konflikten.
@@ -89,13 +107,17 @@ def distribute_games_to_fields_and_assign_referees(fun_matches: List[Tuple[str, 
             if fields[target_field][i][2] in fields[source_field][i]:
                 possible_referees = [team for team in all_teams if team not in fields[target_field][i][0] and team not in fields[target_field][i][1] and team not in fields[source_field][i]]
                 if possible_referees:
-                    selected_team = min(possible_referees, key=lambda x: referee_dic[x])
+                    selected_team = min(possible_referees, key=lambda x: referee_dic[x]) #js lambda
                     referee_dic[fields[target_field][i][2]] -= 1
                     fields[target_field][i] = (fields[target_field][i][0], fields[target_field][i][1], selected_team)
                     referee_dic[selected_team] += 1
 
 
 
+    #Funktion zum aktualisieren der Schiedsrichter auf den Feldern
+    #Kann immer für das neu aufteilen der schiedsrichter verwendet werden, da keine überprüfung stattfindet
+    #Nur wenn die Felder klar auf die gruppen verteilt ist
+    #regelt die gleichmäßige Verteilung der Schiedsrichter auf die Felder
     def update_field_ref_without_checking(source_field, target_field, all_teams, referee_dic):
         """
         Überprüft und aktualisiert die Schiedsrichter für die Ziel-Felder basierend auf Konflikten.
@@ -105,24 +127,22 @@ def distribute_games_to_fields_and_assign_referees(fun_matches: List[Tuple[str, 
         :param all_teams: Liste der möglichen Schiedsrichterteams
         :param referee_dic: Dictionary, das die Einsätze der Schiedsrichter zählt
         """
-        min_leng = min(len(fields[source_field]), len(fields[target_field]))
 
-        for i in range(min_leng):
+        #falls auf einem feld n spiele sind auf auf dem anderen feld n-1 spiele sind, da sonst index error in liste auftritt
+        min_len = min(len(fields[source_field]), len(fields[target_field]))
+
+        for i in range(min_len):
             possible_referees = [team for team in all_teams if team not in fields[target_field][i][0] and team not in fields[target_field][i][1] and team not in fields[source_field][i]]
+
             if possible_referees:
                 selected_team = min(possible_referees, key=lambda x: referee_dic[x])
                 referee_dic[fields[target_field][i][2]] -= 1
                 fields[target_field][i] = (fields[target_field][i][0], fields[target_field][i][1], selected_team)
-
                 referee_dic[selected_team] += 1
-
-
-
 
 
     # Basierend auf der Anzahl der Felder werden die Listen den Feldern zugewiesen
     fields: Dict[int, List[Tuple[str, str, str]]] = {i: [] for i in range(1, num_fields + 1)}
-
 
 
     fun_matches_with_referees: List[Tuple[str, str, str]] = []
@@ -251,14 +271,10 @@ def distribute_games_to_fields_and_assign_referees(fun_matches: List[Tuple[str, 
         update_field_ref_without_checking(3, 4, all_teams_competitive, referee_competitive_dic)
         update_field_ref_without_checking(4, 3, all_teams_competitive, referee_competitive_dic)
 
-
-
-
-
     return fields
 
 
-
+#Funktion für die erstellung der Spiele für eine Gruppe
 def distribute_games_to_fields_with_one_group(only_team_matches: List[Tuple[str, str]], num_fields: int) -> Dict[int, List[Tuple[str, str, str]]]:
     """
     Weist die Spiele einer Gruppe den Feldern zu und weist Schiedsrichter zu.
@@ -324,51 +340,45 @@ def distribute_games_to_fields_with_one_group(only_team_matches: List[Tuple[str,
                 fields[current_field].append(only_team_matches_with_referees.pop())
                 current_field_index = (current_field_index + 1) % len(field_rotation)
 
-
-
-
     return fields
 
 
 
 
-# Beispiel: Turnier mit 6 Teams für jede Gruppe
-num_teams_group1: int = 7
-num_teams_group2: int = 8
+#startet das Programm
+if __name__ == "__main__":
+    # Beispiel: Turnier mit 6 Teams für jede Gruppe
+    num_teams_group1: int = 6
+    num_teams_group2: int = 7
 
-# Benutzer wählt die Anzahl der Felder (2 oder 3)
+    # Benutzer wählt die Anzahl der Felder (2 oder 3)
 
-count_groups: int = int(input("Gib die Anzahl an Leistungsgruppen an (1 oder 2): "))
-num_fields: int = int(input("Gib die Anzahl der Felder ein (2 oder 3): "))
-hin_und_rueck: str = str(input("Hin- und Rückspiel? (j oder n): ")).lower()
-hin_und_rueck_bool: bool = False
+    count_groups: int = int(input("Gib die Anzahl an Leistungsgruppen an (1 oder 2): "))
+    num_fields: int = int(input("Gib die Anzahl der Felder ein (2 oder 3): "))
 
-if hin_und_rueck == "j":
-    hin_und_rueck_bool = True
-elif hin_und_rueck == "n":
-    hin_und_rueck_bool = False
-
-
-#num_teams_group1: int = int(input("Wie viele Teams in Gruppe Fun: "))
-
-#if count_groups == 2:
-#    num_teams_group2: int = int(input("Wie viele Teams in Gruppe Schwitzer: "))
-
+    #hin_und_rueck: str = str(input("Hin- und Rückspiel? (j oder n): ")).lower()
+    #hin_und_rueck_bool: bool = False
+    #if hin_und_rueck == "j":
+    #    hin_und_rueck_bool = True
+    #elif hin_und_rueck == "n":
+    #    hin_und_rueck_bool = False
+    #num_teams_group1: int = int(input("Wie viele Teams in Gruppe Fun: "))
+    #if count_groups == 2:
+    #    num_teams_group2: int = int(input("Wie viele Teams in Gruppe Schwitzer: "))
 
 
+    fun_matches = get_games_weighted(num_teams_group1, "Fun")
+    competitive_matches = get_games_weighted(num_teams_group2, "Schwitzer")
 
-fun_matches = get_games_weighted(num_teams_group1, "Fun")
-competitive_matches = get_games_weighted(num_teams_group2, "Schwitzer")
+    if count_groups == 2:
+        fields_new = distribute_games_to_fields_and_assign_referees(fun_matches, competitive_matches, num_fields)
 
-if count_groups == 2:
-    fields_new = distribute_games_to_fields_and_assign_referees(fun_matches, competitive_matches, num_fields)
+    elif count_groups == 1:
+        fields_new = distribute_games_to_fields_with_one_group(fun_matches, num_fields)
 
-if count_groups == 1:
-    fields_new = distribute_games_to_fields_with_one_group(fun_matches, num_fields)
-
-for field, matches in fields_new.items():
-    print(f"\nFeld {field}:")
-    for index, match in enumerate(matches):
-        team1, team2, referee = match
-        print(f"{index}: {team1} vs {team2} - Schiedsrichter: {referee}")
+    for field, matches in fields_new.items():
+        print(f"\nFeld {field}:")
+        for index, match in enumerate(matches):
+            team1, team2, referee = match
+            print(f"{index}: {team1} vs {team2} - Schiedsrichter: {referee}")
 
